@@ -9,5 +9,7 @@ DEBUG = True
 # Connect to the database
 
 
-# TODO IMPLEMENT DATABASE URL
-SQLALCHEMY_DATABASE_URI = '<Put your local database url>'
+# Connect to local database URL:
+# in this case the database is called 'project1' and the local login credentials are provided.
+# dialect is 'PostgreSQL' and the driver is 'psycopg2'.
+SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:Biosphere4212!@localhost:5432/project1'
