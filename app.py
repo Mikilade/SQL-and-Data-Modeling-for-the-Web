@@ -154,42 +154,20 @@ def show_venue(venue_id):
   current_time = datetime.now()
 
   # Query past and future shows by filtering based on time comparison to current
-  past_shows = Show.query.filter(
-     Show.venue_id == venue_id,
-     Show.start_time < current_time
-  ).all()
-  upcoming_shows = Show.query.filter(
-     Show.venue_id == venue_id,
-     Show.start_time >= current_time
-  ).all()
-
-  # Populate past shows list
   past_shows_data = []
-  for show in past_shows:
-     # Lookup the artist for the show
-     artist = Artist.query.get(show.artist_id)
-     past_shows_data.append(
-        {
-           'artist_id': show.artist_id,
-           'artist_name': artist.name,
-           'artist_image_link': artist.image_link,
-           'start_time': show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        }
-     )
-  
-  # Populate upcoming shows list
   upcoming_shows_data = []
-  for show in upcoming_shows:
-     # Lookup the artist for the show
-     artist = Artist.query.get(show.artist_id)
-     upcoming_shows_data.append(
-        {
+
+  for show in venue.shows:
+     queried_show = {
            'artist_id': show.artist_id,
-           'artist_name': artist.name,
-           'artist_image_link': artist.image_link,
+           'artist_name': show.artist.name,
+           'artist_image_link': show.artist.image_link,
            'start_time': show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        }
-     )
+      }
+     if show.start_time < current_time:
+        past_shows_data.append(queried_show)
+     else:
+        upcoming_shows_data.append(queried_show)
   
   # Construct data dict for template
   data = {
@@ -227,37 +205,49 @@ def create_venue_submission():
   """Create the venue submission and add it to the DB."""
 
   form = VenueForm(request.form)
-  try:
-    # Populate a new Venue object with captured form data
-    new_venue = Venue(
-      name = form.name.data,
-      city = form.city.data,
-      state = form.state.data,
-      address = form.address.data,
-      phone = form.phone.data,
-      genres = form.genres.data,
-      facebook_link = form.facebook_link.data,
-      image_link = form.image_link.data,
-      website_link = form.website_link.data,
-      looking_for_talent = form.seeking_talent.data,
-      seeking_description = form.seeking_description.data
-    )
-    # Add the new venue to the ongoing session
-    db.session.add(new_venue)
-    # Commit the session to the database to really save it
-    db.session.commit()
-    # Flash the success message
-    flash('Venue ' + new_venue.name + ' was successfully listed!')
-  except Exception as e:
-    # Rollback the session, an error occurred
-    db.session.rollback()
-    # Flash the error message
-    flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
-    # Debugging statement to capture the exception
-    print(f'The following exception occurred: {e}')
-  finally:
-    # Close the session once everything is done.
-    db.session.close()
+
+  # check form validation
+  if form.validate():
+    try:
+      # Populate a new Venue object with captured form data
+      new_venue = Venue(
+        name = form.name.data,
+        city = form.city.data,
+        state = form.state.data,
+        address = form.address.data,
+        phone = form.phone.data,
+        genres = form.genres.data,
+        facebook_link = form.facebook_link.data,
+        image_link = form.image_link.data,
+        website_link = form.website_link.data,
+        looking_for_talent = form.seeking_talent.data,
+        seeking_description = form.seeking_description.data
+      )
+      # Add the new venue to the ongoing session
+      db.session.add(new_venue)
+      # Commit the session to the database to really save it
+      db.session.commit()
+      # Flash the success message
+      flash('Venue ' + new_venue.name + ' was successfully listed!')
+    except Exception as e:
+      # Rollback the session, an error occurred
+      db.session.rollback()
+      # Flash the error message
+      flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
+      # Debugging statement to capture the exception
+      print(f'The following exception occurred: {e}')
+    finally:
+      # Close the session once everything is done.
+      db.session.close()
+  # if invalid field
+  else:
+     message = []
+     for field, errors in form.errors.items():
+        for error in errors:
+           message.append(f'{field}: {error}')
+     flash('Please fix the following errors: ' + ', '.join(message))
+     form = VenueForm()
+     return render_template('forms/new_venue.html', form=form) 
 
   return render_template('pages/home.html') # Redirect to homepage
 
@@ -317,8 +307,8 @@ def search_artists():
 
   # Partial string search with SQLAlchemy. Filters a query from the Artist table using partial string search.
   # Returns all results.
-  search_results = Venue.query.filter(
-     Venue.name.ilike(f'%{search_term}%')
+  search_results = Artist.query.filter(
+     Artist.name.ilike(f'%{search_term}%')
   ).all()
 
   # Create response dict. Count number of artist hits then initialize empty data list.
@@ -362,42 +352,20 @@ def show_artist(artist_id):
   current_time = datetime.now()
 
   # Query past and future shows by filtering based on time comparison to current
-  past_shows = Show.query.filter(
-     Show.venue_id == artist_id,
-     Show.start_time < current_time
-  ).all()
-  upcoming_shows = Show.query.filter(
-     Show.venue_id == artist_id,
-     Show.start_time >= current_time
-  ).all()
-
-  # Populate past shows list
   past_shows_data = []
-  for show in past_shows:
-     # Lookup the artist for the show
-     venue = Venue.query.get(show.venue_id)
-     past_shows_data.append(
-        {
-           'venue_id': show.venue_id,
-           'venue_name': venue.name,
-           'venue_image_link': venue.image_link,
-           'start_time': show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        }
-     )
-  
-  # Populate upcoming shows list
   upcoming_shows_data = []
-  for show in upcoming_shows:
-     # Lookup the artist for the show
-     venue = Venue.query.get(show.venue_id)
-     upcoming_shows_data.append(
-        {
+
+  for show in artist.shows:
+     queried_show = {
            'venue_id': show.venue_id,
-           'venue_name': venue.name,
-           'venue_image_link': venue.image_link,
+           'venue_name': show.venue.name,
+           'venue_image_link': show.venue.image_link,
            'start_time': show.start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        }
-     )
+      }
+     if show.start_time < current_time:
+        past_shows_data.append(queried_show)
+     else:
+        upcoming_shows_data.append(queried_show)
   
   # Construct data dict for template
   data = {
@@ -583,38 +551,47 @@ def create_artist_form():
 def create_artist_submission():
     """Save the new artist details to the db."""
   # called upon submitting the new artist listing form
-
     form = ArtistForm(request.form)
-    try:
-      # Populate a new artist object with captured form data
-      new_artist = Artist(
-        name = form.name.data,
-        city = form.city.data,
-        state = form.state.data,
-        phone = form.phone.data,
-        genres = form.genres.data,
-        facebook_link = form.facebook_link.data,
-        image_link = form.image_link.data,
-        website_link = form.website_link.data,
-        looking_for_venues = form.seeking_venue.data,
-        seeking_description = form.seeking_description.data
-      )
-      # Add the new venue to the ongoing session
-      db.session.add(new_artist)
-      # Commit the session to the database to really save it
-      db.session.commit()
-      # Flash the success message
-      flash('Artist ' + new_artist.name + ' was successfully listed!')
-    except Exception as e:
-      # Rollback the session, an error occurred
-      db.session.rollback()
-      # Flash the error message
-      flash('An error occurred. Artist ' + form.name.data + ' could not be listed.')
-      # Debugging statement to capture the exception
-      print(f'The following exception occurred: {e}')
-    finally:
-      # Close the session once everything is done.
-      db.session.close()
+    if form.validate():
+      try:
+        # Populate a new artist object with captured form data
+        new_artist = Artist(
+          name = form.name.data,
+          city = form.city.data,
+          state = form.state.data,
+          phone = form.phone.data,
+          genres = form.genres.data,
+          facebook_link = form.facebook_link.data,
+          image_link = form.image_link.data,
+          website_link = form.website_link.data,
+          looking_for_venues = form.seeking_venue.data,
+          seeking_description = form.seeking_description.data
+        )
+        # Add the new venue to the ongoing session
+        db.session.add(new_artist)
+        # Commit the session to the database to really save it
+        db.session.commit()
+        # Flash the success message
+        flash('Artist ' + new_artist.name + ' was successfully listed!')
+      except Exception as e:
+        # Rollback the session, an error occurred
+        db.session.rollback()
+        # Flash the error message
+        flash('An error occurred. Artist ' + form.name.data + ' could not be listed.')
+        # Debugging statement to capture the exception
+        print(f'The following exception occurred: {e}')
+      finally:
+        # Close the session once everything is done.
+        db.session.close()
+    # if invalid field
+    else:
+      message = []
+      for field, errors in form.errors.items():
+          for error in errors:
+            message.append(f'{field}: {error}')
+      flash('Please fix the following errors: ' + ', '.join(message))
+      form = ArtistForm()
+      return render_template('forms/new_artist.html', form=form) 
 
     return render_template('pages/home.html') # Redirect to homepage
 
@@ -659,38 +636,47 @@ def create_show_submission():
   """Save new show to the DB."""
   # Create a form from input data
   form = ShowForm(request.form)
+  if form.validate():
+    try:
+      # Query the Artist and Venue with the specified IDs. Throw an exception if not found.
+      artist = Artist.query.get(form.artist_id.data)
+      if not artist:
+          raise ValueError(f'Artist ID {form.artist_id.data} does not exist.')
 
-  try:
-     # Query the Artist and Venue with the specified IDs. Throw an exception if not found.
-     artist = Artist.query.get(form.artist_id.data)
-     if not artist:
-        raise ValueError(f'Artist ID {form.artist_id.data} does not exist.')
+      # Check if the venue_id exists in the Venue table
+      venue = Venue.query.get(form.venue_id.data)
+      if not venue:
+          raise ValueError(f'Venue ID {form.venue_id.data} does not exist.')
 
-     # Check if the venue_id exists in the Venue table
-     venue = Venue.query.get(form.venue_id.data)
-     if not venue:
-        raise ValueError(f'Venue ID {form.venue_id.data} does not exist.')
-
-     # Create the new show object for insert into db
-     new_show = Show(
-        artist_id = form.artist_id.data,
-        venue_id = form.venue_id.data,
-        start_time = form.start_time.data
-     )
-     # Add and commit to db
-     db.session.add(new_show)
-     db.session.commit()
-     # on successful db insert, flash success
-     flash('Show was successfully listed!')
-  except Exception as e:
-     # Abort the session, an exception has occurred
-     db.session.rollback()
-     # Flash an error message and dump the exception for debugging
-     flash('An error occurred. Show could not be listed.')
-     print(f'Exception occurred: {e}')
-  finally:
-     # Clean up and close session
-     db.session.close()
+      # Create the new show object for insert into db
+      new_show = Show(
+          artist_id = form.artist_id.data,
+          venue_id = form.venue_id.data,
+          start_time = form.start_time.data
+      )
+      # Add and commit to db
+      db.session.add(new_show)
+      db.session.commit()
+      # on successful db insert, flash success
+      flash('Show was successfully listed!')
+    except Exception as e:
+      # Abort the session, an exception has occurred
+      db.session.rollback()
+      # Flash an error message and dump the exception for debugging
+      flash('An error occurred. Show could not be listed.')
+      print(f'Exception occurred: {e}')
+    finally:
+      # Clean up and close session
+      db.session.close()
+  # if invalid field
+  else:
+     message = []
+     for field, errors in form.errors.items():
+        for error in errors:
+           message.append(f'{field}: {error}')
+     flash('Please fix the following errors: ' + ', '.join(message))
+     form = ShowForm()
+     return render_template('forms/new_show.html', form=form) 
 
   return render_template('pages/home.html')
 

@@ -8,7 +8,7 @@ DEBUG = True
 
 # Connect to the database
 
-
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 # Connect to local database URL:
 # in this case the database is called 'project1' and the local login credentials are provided.
 # dialect is 'PostgreSQL' and the driver is 'psycopg2'.

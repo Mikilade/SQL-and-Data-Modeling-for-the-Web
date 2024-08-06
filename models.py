@@ -21,6 +21,8 @@ class Venue(db.Model):
     looking_for_talent = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(500)) # allocate a good amount of characters for the seeking description
 
+    shows = db.relationship('Show', backref='venue', lazy='joined', cascade="all, delete")
+
 class Artist(db.Model):
     """The Artist class is constructed from the Artist table within the local db."""
     __tablename__ = 'Artist'
@@ -39,11 +41,13 @@ class Artist(db.Model):
     looking_for_venues = db.Column(db.Boolean)
     seeking_description = db.Column(db.String(500)) # allocate a good amount of characters for the seeking description
 
+    shows = db.relationship('Show', backref='artist', lazy='joined', cascade="all, delete")
+
 class Show(db.Model):
    """The Show class is constructed from the Show table within the local db."""
    __tablename__ = 'Show'
 
    id = db.Column(db.Integer, primary_key=True)
    start_time = db.Column(db.DateTime, nullable=False)
-   artist_id = db.Column(db.Integer, nullable=False)
-   venue_id = db.Column(db.Integer, nullable=False)
+   artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
+   venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
