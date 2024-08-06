@@ -323,7 +323,7 @@ def search_artists():
   # filter shows by a corresponding artist ID and if the start time is upcoming (in the future), then count
   for artist in search_results:
      num_upcoming_shows = Show.query.filter(
-        Show.artist == artist.id,
+        Show.artist_id == artist.id,
         Show.start_time > current_time
      ).count()
 
@@ -335,7 +335,7 @@ def search_artists():
         }
      )
   
-  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
+  return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term'))
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
